@@ -1,6 +1,7 @@
 #Todo List
 
 #Imports
+import json
 from typing import Dict
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,6 +32,17 @@ class Appointment(BaseModel):
     
 todo_list: Dict[int, Appointment] = {}
 
+# load all appointments in the text file into the todo_list data structure
+
+
+@app.on_event("startup")
+def load_appointments():
+    '''Load all appointments'''
+    with open('appointments.txt', 'r') as appointments_list_file:
+        data = appointments_list_file.read()
+        if data:
+            todo_list.update(json.loads(data))
+
 #Greeting Site
 @app.get("/")
 async def root():
@@ -45,15 +57,12 @@ async def read_appointments():
 @app.post("/appointments")
 async def create_appointment(appointment: Appointment):
         
-    appointment_id = 0
-    if len(todo_list) == 0:
-        appointment_id = 1
-    else:
-        appointment_id = max(todo_list.keys()) + 1
+    appointment_id = str(len(todo_list) + 1)
+    
     todo_list[appointment_id] = appointment
     
     with open('appointments.txt', 'w+') as appointments_list_file:
-        appointments_list_file.write(f'{todo_list}')
+        appointments_list_file.write(json.dumps(todo_list, default=lambda o: o.__dict__, sort_keys=True, indent=4))
     
     return {"appointment_id": appointment_id}
 
@@ -66,7 +75,7 @@ async def update_appointment(appointment_id: int, appointment:Appointment):
     todo_list[appointment_id] = appointment
         
     with open('appointments.txt', 'w+') as appointments_list_file:
-        appointments_list_file.write(f"{todo_list}")
+        appointments_list_file.write(json.dumps(todo_list, default=lambda o: o.__dict__, sort_keys=True, indent=4))
         
         #return {"message": "Appointment updated successfully"}
         
@@ -81,7 +90,7 @@ async def delete_appointment(appointment_id:int):
     del todo_list[appointment_id]
         
     with open('appointments.txt', 'w+') as appointments_list_file:
-        appointments_list_file.write(f"{todo_list}")
+        appointments_list_file.write((json.dumps(todo_list, default=lambda o: o.__dict__, sort_keys=True, indent=4)))
     return {"message":"Appointment deleted"}
 
 if __name__ == "__main__":
